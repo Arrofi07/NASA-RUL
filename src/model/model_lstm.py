@@ -25,22 +25,35 @@ class LSTMModel(nn.Module):
         out = out[:, -1, :]
 
         return self.fc(out)
-    
-def train_lstm(train_loader, val_loader, input_size, device):
 
-    model = LSTMModel(input_size).to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+def train_lstm(config, data):
+
+    device = config["training"]["device"]
+
+    params = config["models"]["lstm"]
+
+    model = LSTMModel(
+        input_size=config["data"]["input_size"],
+        hidden_size=params["hidden_size"],
+        num_layers=params["num_layers"]
+        ).to(device)
+
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=config["training"]["lr"]
+    )
 
     criterion = torch.nn.MSELoss()
 
     train_torch_model(
         model,
-        train_loader,
-        val_loader,
+        data["dl"]["train_loader"],
+        data["dl"]["val_loader"],
         optimizer,
         criterion,
-        device
+        device,
+        config["training"]["epochs"]
     )
 
     return model

@@ -1,13 +1,15 @@
 from lightgbm import LGBMRegressor
 
-def train_lightgbm(X_train, y_train):
+def train_lightgbm(config, data):
 
-    model = LGBMRegressor(
-        n_estimators=500,
-        learning_rate=0.05,
-        max_depth=-1
-    )
+    params = config["models"]["lightgbm"]
 
-    model.fit(X_train, y_train)
+    model = LGBMRegressor(**params)
+
+    model.fit(
+        data["ml"]["X_train"], 
+        data["ml"]["y_train"],
+        eval_set=[(data["ml"]["X_val"],data["ml"]["y_val"])]
+        )
 
     return model

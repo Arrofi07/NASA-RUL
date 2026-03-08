@@ -32,9 +32,16 @@ class TCN(nn.Module):
     
 
 
-def train_tcn(train_loader, val_loader, input_size, device):
+def train_tcn(config, data):
 
-    model = TCN(input_size).to(device)
+    device = config["training"]["device"]
+
+    params = config["models"]["tcn"]
+
+    model = TCN(
+        input_size=config["data"]["input_size"],
+        num_channels=params["num_channels"]
+        ).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
@@ -42,11 +49,12 @@ def train_tcn(train_loader, val_loader, input_size, device):
 
     train_torch_model(
         model,
-        train_loader,
-        val_loader,
+        data["dl"]["train_loader"],
+        data["dl"]["val_loader"],
         optimizer,
         criterion,
         device
     )
 
     return model
+

@@ -1,8 +1,8 @@
-from model.model_xgboost import train_xgboost
-from model.model_lightgbm import train_lightgbm
-from model.model_lstm import train_lstm
-from model.model_tcn import train_tcn
-from model.model_transformer import train_transformer
+from src.model.model_xgboost import train_xgboost
+from src.model.model_lightgbm import train_lightgbm
+from src.model.model_lstm import train_lstm
+from src.model.model_tcn import train_tcn
+from src.model.model_transformer import train_transformer
 
 
 MODEL_REGISTRY = {

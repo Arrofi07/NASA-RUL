@@ -25,20 +25,32 @@ def evaluate_torch_model(model, loader, device):
 
     return rmse
 
-def evaluate_model(model_name, model, data, device):
+def evaluate_model(name, model, data, device):
 
-    if model_name in ["xgboost", "lightgbm"]:
+    if name in ["xgboost", "lightgbm"]:
 
-        preds = model.predict(data["X_val"])
+        preds = model.predict(data["ml"]["X_val"])
 
-        rmse = np.sqrt(mean_squared_error(data["y_val"], preds))
+        rmse = np.sqrt(mean_squared_error(data["ml"]["y_val"], preds))
 
     else:
 
-        rmse = evaluate_torch_model(
-            model,
-            data["val_loader"],
-            device
-        )
+        model.eval()
+
+        preds = []
+        targets = []
+
+        with torch.no_grad():
+
+            for X, y in data["dl"]["val_loader"]:
+
+                X = X.to(device)
+
+                pred = model(X).cpu().numpy()
+
+                preds.extend(pred)
+                targets.extend(y.numpy())
+
+        rmse = np.sqrt(mean_squared_error(targets, preds))
 
     return rmse

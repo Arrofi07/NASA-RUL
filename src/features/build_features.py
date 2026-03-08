@@ -21,6 +21,7 @@ def build_features(train_data, test_data):
     train.drop(columns=low_var, inplace=True)
     test.drop(columns=low_var, inplace=True)
 
+    # rolling window features
     sensor_cols = [c for c in train.columns if "sensor" in c]
 
     window = 10
@@ -44,7 +45,14 @@ def build_features(train_data, test_data):
     for col in sensor_cols:
         train[f"{col}_diff"] = train.groupby("engine_id")[col].diff()
 
+    # remove rows where rolling features are undefined only some columns
+    feature_cols = [c for c in train.columns if "sensor" in c]
+
+    train = train.dropna(subset=feature_cols)
+
     return (train, test)
+
+
 
 def create_sequences(train_data, seq_len=30):
 

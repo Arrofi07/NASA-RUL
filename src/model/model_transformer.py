@@ -4,11 +4,11 @@ import torch
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, input_dim, d_model=64, nhead=4):
+    def __init__(self, input_size, d_model=64, nhead=4):
 
         super().__init__()
 
-        self.embedding = nn.Linear(input_dim, d_model)
+        self.embedding = nn.Linear(input_size, d_model)
 
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
@@ -36,9 +36,17 @@ class TransformerModel(nn.Module):
     
 
 
-def train_transformer(train_loader, val_loader, input_size, device):
+def train_transformer(config, data):
 
-    model = TransformerModel(input_size).to(device)
+    device = config["training"]["device"]
+
+    params = config["models"]["transformer"]
+
+    model = TransformerModel(
+        input_size=config["data"]["input_size"],
+        d_model=params["d_model"],
+        nhead=params["nhead"]
+        ).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
@@ -46,8 +54,8 @@ def train_transformer(train_loader, val_loader, input_size, device):
 
     train_torch_model(
         model,
-        train_loader,
-        val_loader,
+        data["dl"]["train_loader"],
+        data["dl"]["val_loader"],
         optimizer,
         criterion,
         device
