@@ -20,4 +20,4 @@ def train_torch_model(model, train_loader, val_loader, optimizer, criterion, dev
             loss.backward()
             optimizer.step()
 
-            print(f"Epoch {epoch}, Loss {loss.item()}")
+            #print(f"Epoch {epoch}, Loss {loss.item()}")
