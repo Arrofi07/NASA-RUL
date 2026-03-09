@@ -11,6 +11,6 @@ MODEL_REGISTRY = {
     "lightgbm": train_lightgbm,
 
     "lstm": train_lstm,
-    "tcn": train_tcn,
-    "transformer": train_transformer
+    "tcn": train_tcn
+    # "transformer": train_transformer
 }

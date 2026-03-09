@@ -58,7 +58,8 @@ def train_transformer(config, data):
         data["dl"]["val_loader"],
         optimizer,
         criterion,
-        device
+        device,
+        epochs=config["training"]["epochs"]
     )
 
     return model

@@ -34,6 +34,13 @@ def build_features(train_data, test_data):
             .reset_index(0, drop=True)
         )
 
+        test[f"{col}_mean"] = (
+            test.groupby("engine_id")[col]
+            .rolling(window)
+            .mean()
+            .reset_index(0, drop=True)
+        )
+
     for col in sensor_cols:
         train[f"{col}_std"] = (
             train.groupby("engine_id")[col]
@@ -42,13 +49,22 @@ def build_features(train_data, test_data):
             .reset_index(0, drop=True)
         )
 
+        test[f"{col}_std"] = (
+            test.groupby("engine_id")[col]
+            .rolling(window)
+            .std()
+            .reset_index(0, drop=True)
+        )
+
     for col in sensor_cols:
         train[f"{col}_diff"] = train.groupby("engine_id")[col].diff()
+        test[f"{col}_diff"] = test.groupby("engine_id")[col].diff()
 
     # remove rows where rolling features are undefined only some columns
     feature_cols = [c for c in train.columns if "sensor" in c]
 
     train = train.dropna(subset=feature_cols)
+    test = test.dropna(subset=feature_cols)
 
     return (train, test)
 
@@ -70,3 +86,19 @@ def create_sequences(train_data, seq_len=30):
             y_seq.append(engine_df.iloc[i+seq_len]["RUL"])
 
     return np.array(X_seq), np.array(y_seq)
+
+def create_test_sequences(test_data, seq_len=30, sensor_cols=None):
+
+    sequences = []
+
+    if sensor_cols is None:
+        sensor_cols = [c for c in test_data.columns if "sensor" in c]
+
+    for engine_id in test_data["engine_id"].unique():
+        engine = test_data[test_data["engine_id"] == engine_id]
+
+        if len(engine) >= seq_len:
+            seq = engine.iloc[-seq_len:][sensor_cols].values
+            sequences.append(seq)
+
+    return np.array(sequences)
