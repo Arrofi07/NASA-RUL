@@ -94,11 +94,17 @@ def create_test_sequences(test_data, seq_len=30, sensor_cols=None):
     if sensor_cols is None:
         sensor_cols = [c for c in test_data.columns if "sensor" in c]
 
-    for engine_id in test_data["engine_id"].unique():
-        engine = test_data[test_data["engine_id"] == engine_id]
+    for engine in test_data.engine_id.unique():
+        engine = test_data[test_data.engine_id == engine]
 
-        if len(engine) >= seq_len:
+        # If engine has less than seq_len, pad with zeros at beginning
+        if len(engine) < seq_len:
+            pad_len = seq_len - len(engine)
+            pad = np.zeros((pad_len, len(sensor_cols)))
+            seq = np.vstack([pad, engine[sensor_cols].values])
+        else:
             seq = engine.iloc[-seq_len:][sensor_cols].values
-            sequences.append(seq)
+
+        sequences.append(seq)
 
     return np.array(sequences)
