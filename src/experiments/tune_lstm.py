@@ -1,82 +1,107 @@
+from src.model.model_lstm import LSTMModel
 import torch
-import torch.nn as nn
+from src.model.train import train_torch_model
 
-class LSTMModel(nn.Module):
+import mlflow
+import mlflow.pytorch
 
-    def __init__(self, input_size):
+experiment = mlflow.get_experiment_by_name("RUL_LSTM_Tuning")
 
-        super(LSTMModel, self).__init__()
+def tune_lstm(config, data):
 
-        # LSTM layers
-        self.lstm1 = nn.LSTM(
-            input_size=input_size,
-            hidden_size=128,
-            batch_first=True
+    device = config["training"]["device"]
+    params = config["models"]["lstm"]
+
+    with mlflow.start_run(experiment_id=experiment.experiment_id):
+
+        # log parameters
+        mlflow.log_params({
+            "hidden_size": params["hidden_size"],
+            "num_layers": params["num_layers"],
+            "dropout": params["dropout"],
+            "lr": config["training"]["lr"],
+            "epochs": config["training"]["epochs"]
+        })
+
+        model = LSTMModel(
+            input_size=config["data"]["input_size"],
+            hidden_size=params["hidden_size"],
+            num_layers=params["num_layers"],
+            dropout=params["dropout"]
+        ).to(device)
+
+        optimizer = torch.optim.Adam(
+            model.parameters(),
+            lr=config["training"]["lr"]
         )
 
-        self.dropout1 = nn.Dropout(0.3)
+        criterion = torch.nn.MSELoss()
 
-        self.lstm2 = nn.LSTM(
-            input_size=128,
-            hidden_size=64,
-            batch_first=True
+        val_rmse = train_torch_model(
+            model,
+            data["dl"]["train_loader"],
+            data["dl"]["val_loader"],
+            optimizer,
+            criterion,
+            device,
+            epochs=config["training"]["epochs"]
         )
 
-        self.dropout2 = nn.Dropout(0.3)
+        # log metric
+        mlflow.log_metric("val_rmse", val_rmse)
 
-        self.lstm3 = nn.LSTM(
-            input_size=64,
-            hidden_size=32,
-            batch_first=True
-        )
+        # log model
+        mlflow.pytorch.log_model(model, "model")
 
-        self.dropout3 = nn.Dropout(0.2)
+    return model, val_rmse
 
-        # Fully connected layers
-        self.fc1 = nn.Linear(32, 32)
-        self.relu = nn.ReLU()
+import random
+import copy
 
-        self.fc2 = nn.Linear(32, 1)
+def random_search_lstm(config, data, n_trials=20):
 
-    def forward(self, x):
+    search_space = {
+        "hidden_size": [64, 128],
+        "num_layers": [2, 3],
+        "dropout": [0.2, 0.3],
+        "lr": [1e-3, 5e-4]
+    }
 
-        out, _ = self.lstm1(x)
-        out = self.dropout1(out)
+    best_rmse = float("inf")
+    best_model = None
+    best_params = None
 
-        out, _ = self.lstm2(out)
-        out = self.dropout2(out)
+    for trial in range(n_trials):
 
-        out, _ = self.lstm3(out)
+        print(f"\nTrial {trial+1}/{n_trials}")
 
-        # take last timestep
-        out = out[:, -1, :]
+        hidden_size = random.choice(search_space["hidden_size"])
+        num_layers = random.choice(search_space["num_layers"])
+        dropout = random.choice(search_space["dropout"])
+        lr = random.choice(search_space["lr"])
 
-        out = self.dropout3(out)
+        trial_config = copy.deepcopy(config)
 
-        out = self.fc1(out)
-        out = self.relu(out)
+        trial_config["models"]["lstm"]["hidden_size"] = hidden_size
+        trial_config["models"]["lstm"]["num_layers"] = num_layers
+        trial_config["models"]["lstm"]["dropout"] = dropout
+        trial_config["training"]["lr"] = lr
 
-        out = self.fc2(out)
+        model, val_rmse = tune_lstm(trial_config, data)
 
-        return out
-    
-"""
-Input: (batch, 30, 20)
+        print("Validation RMSE:", val_rmse)
 
-LSTM1 → (batch, 30, 128)
-Dropout
+        if val_rmse < best_rmse:
+            best_rmse = val_rmse
+            best_model = model
+            best_params = {
+                "hidden_size": hidden_size,
+                "num_layers": num_layers,
+                "dropout": dropout,
+                "lr": lr
+            }
 
-LSTM2 → (batch, 30, 64)
-Dropout
+    print("\nBest RMSE:", best_rmse)
+    print("Best Params:", best_params)
 
-LSTM3 → (batch, 30, 32)
-
-Take last timestep
-→ (batch, 32)
-
-Dense(32)
-→ (batch, 32)
-
-Dense(1)
-→ (batch, 1)
-"""
+    return best_model, best_params
